@@ -1,0 +1,45 @@
+{
+  "name": "hubstaff-integration",
+  "version": "0.1.0",
+  "description": "Lightweight TypeScript client for Hubstaff API v2 using Personal Access Token (PAT)",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "require": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "rm -rf dist",
+    "prepare": "npm run build",
+    "prepublishOnly": "npm run clean && npm run build",
+    "dev": "tsc -w -p tsconfig.json",
+    "example": "ts-node examples/demo.ts"
+  },
+  "keywords": [
+    "hubstaff",
+    "api",
+    "typescript",
+    "pat",
+    "oauth2"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^22.7.4",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.5.4"
+  }
+}

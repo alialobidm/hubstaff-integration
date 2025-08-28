@@ -1,0 +1,15 @@
+# Keep npm package lean; files field in package.json is the source of truth
+# This is a safety net if files is changed in the future.
+
+# Exclude sources and tooling
+src/
+examples/
+.vscode/
+node_modules/
+*.log
+*.tgz
+
+# Build output is included via files field
+!dist/
+!README.md
+!LICENSE
