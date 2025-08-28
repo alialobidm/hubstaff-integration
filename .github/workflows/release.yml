@@ -2,20 +2,12 @@ name: Publish to npm
 
 on:
   push:
-    branches:
-      - main
     tags:
-      - 'realese-*'
-  pull_request:
-    types: [closed]
-    branches:
-      - main
+      - "v*.*.*" # e.g., v1.2.3
+      - "*.*.*" # e.g., 1.2.3
 
 jobs:
   publish:
-    if: >-
-      github.event_name == 'push' && (startsWith(github.ref, 'refs/heads/main') || startsWith(github.ref, 'refs/tags/realese-')) ||
-      (github.event_name == 'pull_request' && github.event.pull_request.merged == true && github.base_ref == 'main')
     runs-on: ubuntu-latest
 
     permissions:
@@ -29,8 +21,8 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
-          registry-url: 'https://registry.npmjs.org'
+          node-version: "18"
+          registry-url: "https://registry.npmjs.org"
 
       - name: Install dependencies
         run: npm ci
@@ -38,14 +30,39 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Publish
+      - name: Set version from tag and validate semver
+        id: version
+        run: |
+          TAG_REF="${GITHUB_REF#refs/tags/}"
+          if [[ "$TAG_REF" == v* ]]; then
+            VERSION="${TAG_REF#v}"
+          else
+            VERSION="$TAG_REF"
+          fi
+
+          echo "Tag: $TAG_REF -> Version: $VERSION"
+
+          # Validate SemVer (allows pre-release/build metadata)
+          node -e "const v=process.env.VERSION; const re=/^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-[0-9A-Za-z-.]+)?(?:\\+[0-9A-Za-z-.]+)?$/; if(!re.test(v)){console.error('Invalid semver:', v); process.exit(1);}" \
+            --VERSION="$VERSION"
+
+          # Align package.json version without creating a git tag
+          npm version --no-git-tag-version "$VERSION"
+
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Publish to npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
-          # Only publish on tag or main merges
-          if [[ "${GITHUB_REF}" == refs/tags/realese-* ]]; then
-            npm publish --access public
-          else
-            # For main merges via PR, publish as well
-            npm publish --access public
+          PKG_NAME=$(node -p "require('./package.json').name")
+          PKG_VER=$(node -p "require('./package.json').version")
+          echo "Package: ${PKG_NAME}@${PKG_VER}"
+
+          # Skip if this exact version already exists on npm (avoids failures on re-runs)
+          if npm view "${PKG_NAME}@${PKG_VER}" version >/dev/null 2>&1; then
+            echo "Version already published. Skipping."
+            exit 0
           fi
+
+          npm publish --access public
